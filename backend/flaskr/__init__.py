@@ -16,7 +16,7 @@ def create_app(test_config=None):
     """
     @TODO: Set up CORS. Allow '*' for origins. Delete the sample route after completing the TODOs
     """
-    CORS(app, resources={r"*/api/*":{origins:'*'}})
+    CORS(app)
     """
     @TODO: Use the after_request decorator to set Access-Control-Allow
     """
@@ -57,7 +57,6 @@ def create_app(test_config=None):
             'success': True,
             'plants':formatted_questions[start:end],
             'total_plants':len(formatted_questions), 
-            'current_category': 'current_category':None
             'categories':toDict(categories),
             })
 
@@ -68,23 +67,23 @@ def create_app(test_config=None):
     @app.route('/questions/<int:question_id>' , methods=['DELETE'])
     def delete_question(question_id):
         try:
-        question=Question.query.filter_by(id=question_id).one_or_none()
-        if question is None:
-            abort(404)
-        question.delete()
-        questions=Question.query.order_by(Question.id).all()
-        categories=Category.query.all()
-        paginated_questions=paginate_items(request, questions)
-        return jsonify({
-            'success':True,
-            'deleted':question_id,
-            'questions':paginated_questions,
-            'total_questions':len(questions),
-            'categories':toDict(categories),
-            'current_category':None
-        })
+            question=Question.query.filter_by(id=question_id).one_or_none()
+            if question is None:
+                abort(404)
+            question.delete()
+            questions=Question.query.order_by(Question.id).all()
+            categories=Category.query.all()
+            paginated_questions=paginate_items(request, questions)
+            return jsonify({
+                'success':True,
+                'deleted':question_id,
+                'questions':paginated_questions,
+                'total_questions':len(questions),
+                'categories':toDict(categories),
+        
+            })
         except:
-        abort(422)
+            abort(422)
         
     """
     TEST: When you click the trash icon next to a question, the question will be removed.
@@ -108,34 +107,34 @@ def create_app(test_config=None):
         new_difficulty=request.get_json()['difficulty']
         new_category=request.get_json()['category']
         question=Question(
-            question=new_question 
+            question=new_question,
             answer=new_answer,
             difficulty=new_difficulty,
             category=new_category)
         #Ensure no null field
         if (new_answer and new_category and new_difficulty and new_question):
             try:
-            question.insert()
-            questions=Question.query.order_by(Question.id).all()
-            categories=Category.query.all()
-            paginated_questions=paginate_items(request, questions)
-            if len(paginated_questions)==0:
-                abort(404)
-            return jsonify({
-                'success':True,
-                'created':question.id,
-                'questions':paginated_questions,
-                'total_questions':len(questions),
-                'categories':toDict(categories),
-                'current_category':None
-            })
+                question.insert()
+                questions=Question.query.order_by(Question.id).all()
+                categories=Category.query.all()
+                paginated_questions=paginate_items(request, questions)
+                if len(paginated_questions)==0:
+                    abort(404)
+                return jsonify({
+                    'success':True,
+                    'created':question.id,
+                    'questions':paginated_questions,
+                    'total_questions':len(questions),
+                    'categories':toDict(categories),
+                    'current_category':None
+                })
             except:
-            #clear pending transactions
-            question.rollback()
-            abort(422)
+                #clear pending transactions
+                question.rollback()
+                abort(422)
             finally:
             # close session to free up system resources
-            question.close()
+                question.close()
         
         else:
             abort(400)
@@ -166,10 +165,10 @@ def create_app(test_config=None):
                 'questions':paginated_questions,
                 'total_questions':len(results),
                 'categories':toDict(categories),
-                'current_category':None
+                'current_category': null
             })
         else:
-        abort(400)
+            abort(400)
         
     """
     @TODO:
@@ -190,7 +189,7 @@ def create_app(test_config=None):
             'success':True,
             'questions':paginated_questions,
             'total_questions':len(questions),
-            "categories':toDict(categories) ,
+            'categories':toDict(categories) ,
             'current_category': category_id
         })
     """
@@ -210,23 +209,27 @@ def create_app(test_config=None):
         category=request.get_json()['quiz_category']
         previous_questions=request.get_json()['previous_questions']
         if previous_questions is None:
-        abort(500)
+            abort(500)
         if ('quiz_category' and 'previous_questions') not in request.get_json():
-        abort(400)
+            abort(400)
         if category['id']==0:
-        questions=Question.query.all()
+            questions=Question.query.all()
         else:
-        questions=Question.query.filter_by(category=category['id']).all()
+            questions=Question.query.filter_by(category=category['id']).all()
         #creates a list of formated questions with id not in previous questions
-        list_of_valid_questions=[question.format()   for question in questions if (question.id not in previous_questions)]
+        list_of_valid_questions=[
+            question.format()
+            for question in questions
+            if (question.id not in previous_questions)
+            ]
         if len(list_of_valid_questions)!=0:
         # generates a random index 
-        next_question_index = random.randrange(0, len(list_of_valid_questions))
+            next_question_index = random.randrange(0, len(list_of_valid_questions))
         # picks a next question
-        next_question=list_of_valid_questions[next_question_index]
+            next_question=list_of_valid_questions[next_question_index]
         elif len(list_of_valid_questions)==0:
         # Notifies the frontend to end quiz if no new question left
-        next_question=None
+            next_question=None
         return jsonify({
             'success': True,
             'question':next_question,
@@ -261,6 +264,13 @@ def create_app(test_config=None):
             'error': 422,
             'message': 'could not process recource'
         }), 422
+    @app.errorhandler(500)
+    def server_error(error):
+        return jsonify({
+            'success': False,
+            'error': 500,
+            'message': 'internal server error'
+        }), 500
 
     return app
 
