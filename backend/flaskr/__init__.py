@@ -6,7 +6,22 @@ import random
 
 from models import setup_db, Question, Category
 
+# a helper functions that pagination of questions and returns max. 10 questions per page
 QUESTIONS_PER_PAGE = 10
+def paginate_items(request , items):
+  page=request.args.get('page' ,1 , type=int)
+  start=(page-1)*QUESTIONS_PER_PAGE
+  end=start + QUESTIONS_PER_PAGE
+  items_list=[item.format() for item in items]
+  result=items_list[start:end]
+  return result
+
+# a helper function for type formatting
+def toDict(entries):
+  result={}
+  for entry in entries:
+    result[entry.id]=entry.type
+  return result
 
 def create_app(test_config=None):
     # create and configure the app
@@ -20,41 +35,21 @@ def create_app(test_config=None):
         response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Authorization')
         response.headers.add('Access-Control-Allow-Methods', 'GET, POST, PATCH, DELETE, OPTIONS')
         return response
-    """
-    @TODO:
-    Create an endpoint to handle GET requests
-    for all available categories.
-    """
-
-    """
-    @DONE:
-    Create an endpoint to handle GET requests for questions,
-    including pagination (every 10 questions).
-    This endpoint should return a list of questions,
-    number of total questions, current category, categories.
-
-    TEST: At this point, when you start the application
-    you should see questions and categories generated,
-    ten questions per page and pagination at the bottom of the screen for three pages.
-    Clicking on the page numbers should update the questions.
-    """
+    # an end point to get paginated question of max. 10 per page
     @app.route('/questions')
     def get_questions():
-        # Implement pagination
-        page = request.args.get('page', 1, type=int)
-        start = (page - 1) * 10
-        end = start + 10
-
-        questions = Question.query.all()
-        categories= categories=Category.query.all()
-        formatted_questions = [question.format() for question in questions]
+        questions=Question.query.order_by(Question.id).all()
+        categories=Category.query.all()
+        paginated_questions=paginate_items(request , questions)
+        if len(paginated_questions)==0:
+          abort(404)
         return jsonify({
-            'success': True,
-            'plants':formatted_questions[start:end],
-            'total_plants':len(formatted_questions), 
-            'categories':toDict(categories),
-            })
-
+        "success":True,
+        "questions":paginated_questions,
+        "total_questions":len(questions),
+        "categories":toDict(categories),
+        "current_category":None
+        })
     """
     @DONE:
     Create an endpoint to DELETE question using a question ID.
